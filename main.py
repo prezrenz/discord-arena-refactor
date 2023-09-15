@@ -45,6 +45,9 @@ if __name__ == '__main__':
 			case 2: message = "no match ongoing in this channel"
 			case 3: message = "match already started"
 			case 4: message = "please finish your match first"
+			case 5: message = "need at least 1 more fighter to start"
+			case 6: message = "challenger needs to be one to start match"
+			case 7: message = "cannot join, match already full"
 			case _: message = "unknown error occured, this should not be possible"
 		
 		await ctx.send(message)
@@ -69,18 +72,66 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def start(ctx):
-		await send_error(ctx, 0)
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
+		if channel_match.started:
+			await send_error(ctx, 3)
+			return
+		if len(channel_match.fighters) <= 1:
+			await send_error(ctx, 5)
+			return
+		if channel_match.invoker != ctx.author:
+			await send_error(ctx, 6)
+			return
+		
+		channel_match.start_match()
+		await ctx.send("Battle has started!", embed=channel_match.update_map())
 
 	@bot.command()
 	async def join(ctx):
-		await send_error(ctx, 0)
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
+		if channel_match.started:
+			await send_error(ctx, 3)
+			return
+		if find_user_in_matches(ctx.author.mention):
+			await send_error(ctx, 4)
+			return
+		if len(channel_match.fighters) >= 4:
+			await send_error(ctx, 7)
+			return
+		
+		channel_match.add_fighter(ctx.author)
+		await ctx.send(f"{ctx.author.mention} has joined the Battle at the {ctx.channel}!", embed=channel_match.display_roster())
 
 	@bot.command()
 	async def retire(ctx):
-		await send_error(ctx, 0)
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
 
 	@bot.command()
 	async def end(ctx):
-		await send_error(ctx, 0)
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
 
 	bot.run(getenv("TOKEN"))

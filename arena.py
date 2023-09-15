@@ -80,12 +80,18 @@ class Weapon(Object):
 	def __init__(self, x, y, data, map):
 		Object.__init__(self, x, y, map)
 		self.data = data
+	
+	def put_in_map(self):
+		return f"/{self.x}{self.y}-{self.data['name']}"
 
 class Trap(Object):
 	def __init__(self, x, y, name, damage, map):
 		Object.__init__(self, x, y, map)
 		self.name = name
 		self.damage = damage
+	
+	def put_in_map(self):
+		return f"/{self.x}{self.y}-{self.name}"
 
 class MatchState:
 	def __init__(self, ctx):
@@ -132,6 +138,8 @@ class MatchState:
 
 	def start_match(self):
 		random.shuffle(self.fighters)
+		self.generate_weapons()
+		self.generate_traps()
 
 		self.current_turn += 1
 		self.current_round += 1
@@ -174,8 +182,8 @@ class MatchState:
 			self.current_turn += 1
 
 	def check_actions_left(self):
-		if self.get_current_turn().act > 1:
-			self.get_current_turn().act -= 1
+		if self.get_current_turn().actions > 1:
+			self.get_current_turn().actions -= 1
 
 		else:
 			self.end_turn()
@@ -188,12 +196,11 @@ class MatchState:
 	def update_map(self):
 		message = 	f"""Current Turn:{self.get_current_turn().user.mention}
 						Current Round:{self.current_round}
-						Current Actions Left:{self.get_current_turn().act}
+						Current Actions Left:{self.get_current_turn().actions}
 						Equipped:{self.get_current_turn().equip['name']}"""
 
 		embed = discord.Embed(title="Battlemap", description=message)
 		url = battlemap.get_url() + "10x10"
-
 		for i in self.map:
 			for j in i:
 				if j != 0:
@@ -203,7 +210,7 @@ class MatchState:
 		return embed
 	
 	def display_roster(self):
-		message = f"FIGHTERS({len(self.fighters)/4}):\n"
+		message = f"FIGHTERS({len(self.fighters)}/4):\n"
 
 		for i in self.fighters:
 			message += f"{self.fighters.index(i)+1}. {i.user.mention}\n"
