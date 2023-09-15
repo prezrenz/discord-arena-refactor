@@ -41,6 +41,7 @@ if __name__ == '__main__':
 		
 		match error_code:
 
+			case 0: message = "only admins can end matches"
 			case 1: message = "channel has match currently ongoing"
 			case 2: message = "no match ongoing in this channel"
 			case 3: message = "match already started"
@@ -48,6 +49,8 @@ if __name__ == '__main__':
 			case 5: message = "need at least 1 more fighter to start"
 			case 6: message = "challenger needs to be one to start match"
 			case 7: message = "cannot join, match already full"
+			case 8: message = "you are not part of this match"
+			case 9: message = "match has not started on this channel"
 			case _: message = "unknown error occured, this should not be possible"
 		
 		await ctx.send(message)
@@ -126,6 +129,10 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def end(ctx):
+		if not ctx.author.guild_permissions.administrator:
+			await send_error(ctx, 0)
+			return
+
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -133,5 +140,12 @@ if __name__ == '__main__':
 		if channel_match is None:
 			await send_error(ctx, 2)
 			return
+		if not channel_match.started:
+			await send_error(ctx, 9)
+			return
+		
+		#channel_match.end_match()
+		matches.remove(channel_match)
+		await ctx.send(f"Admin {ctx.author} has ended the Battle at the {ctx.channel}!")
 
 	bot.run(getenv("TOKEN"))
