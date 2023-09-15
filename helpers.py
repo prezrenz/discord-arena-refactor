@@ -5,4 +5,4 @@ def num_to_alpha(num):
 	return chr(num + 96)
 
 def alpha_to_num(ch):
-	return ord(ch - 96)
+	return ord(ch) - 96

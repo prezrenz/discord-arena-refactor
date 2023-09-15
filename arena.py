@@ -41,14 +41,16 @@ class Fighter(Object):
 		prev_x, prev_y = self.get_position()
 	
 		map[prev_x-1][prev_y-1] = 0
-		self.x = helpers.num_to_char(helpers.clamp(prev_x+x, 1, 10))
+		self.x = helpers.num_to_alpha(helpers.clamp(prev_x+x, 1, 10))
 		self.y = helpers.clamp(prev_y+y, 1, 10)
-		map[helpers.char_to_num(self.x)-1][self.y-1] = self
+		map[helpers.alpha_to_num(self.x)-1][self.y-1] = self
 
-	def move(self, x, y, map):
+	def map_move(self, x, y, map):
 		prev_x, prev_y = self.get_position()
-		
-		destination_object = map[prev_x+x-1][prev_y+y-1]
+		cx = helpers.clamp(prev_x+x, 1, 10)
+		cy = helpers.clamp(prev_y+y, 1, 10)
+
+		destination_object = map[cx-1][cy-1]
 		if destination_object == 0:
 			self.confirm_move(x, y, map)
 			
@@ -57,7 +59,7 @@ class Fighter(Object):
 			obj_type = type(destination_object).__name__
 			match obj_type:
 				case "Fighter":
-					pass # if fighter dont move throw error dont end turn
+					pass
 					
 				case "Weapon":
 					self.equip = destination_object.data
@@ -67,7 +69,7 @@ class Fighter(Object):
 					self.hp -= destination_object.damage
 					self.confirm_move(x, y, map)
 				
-			return type
+			return destination_object
 	
 	def reset_actions(self):
 		self.move = 4
@@ -177,7 +179,7 @@ class MatchState:
 			self.current_turn = 0
 
 			for i in self.fighters:
-				i.reset_action()
+				i.reset_actions()
 		else:
 			self.current_turn += 1
 

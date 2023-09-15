@@ -51,9 +51,13 @@ if __name__ == '__main__':
 			case 7: message = "cannot join, match already full"
 			case 8: message = "you are not part of this match"
 			case 9: message = "match has not started on this channel"
+			case 10: message = f"{ctx.author.mention}, it's not your turn!"
+			case 11: message = "you tried to move more than 4 squares"
+			case 12: message = "you tried to move into another fighter"
+			case 13: message = "the arguements must be proper numbers"
 			case _: message = "unknown error occured, this should not be possible"
 		
-		await ctx.send(message)
+		await ctx.send("Error: " + message)
 
 	@bot.command()
 	async def challenge(ctx):
@@ -147,5 +151,51 @@ if __name__ == '__main__':
 		#channel_match.end_match()
 		matches.remove(channel_match)
 		await ctx.send(f"Admin {ctx.author} has ended the Battle at the {ctx.channel}!")
+
+	@bot.command()
+	async def move(ctx, x, y):
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+		
+		try:
+			x = int(x)
+			y = int(y)
+		except ValueError:
+			await send_error(ctx, 13)
+			return
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
+		if not channel_match.started:
+			await send_error(ctx, 9)
+			return
+		if channel_match.get_current_turn().user != ctx.author:
+			await send_error(ctx, 10)
+			return
+		if (int(x)+int(y)) > 4:
+			await send_error(ctx, 11)
+			return
+		
+		move = channel_match.get_current_turn().map_move(int(x), int(y), channel_match.map)
+		move_location = channel_match.get_current_turn().x + str(channel_match.get_current_turn().y)
+		
+		if move == 0:
+			await ctx.send(f"{ctx.author.mention} has moved to {move_location}")
+		elif isinstance(move, arena.Fighter):
+			await send_error(ctx, 12)
+			return
+		elif isinstance(move, arena.Weapon):
+			await ctx.send(f"{ctx.author.mention} has equipped a {channel_match.get_current_turn().equip['name']} and moved to {move_location}")
+		elif isinstance(move, arena.Trap):
+			await ctx.send(f"{ctx.author.mention} has stepped into a {move.name} trap and moved to {move_location}")
+
+		channel_match.check_actions_left()
+		await ctx.send(embed=channel_match.update_map())
+
+	@move.error
+	async def discord_errors(ctx, error):
+		if isinstance(error, commands.MissingRequiredArgument):
+			await ctx.send("Error: missing arguements for command used")
 
 	bot.run(getenv("TOKEN"))
