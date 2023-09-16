@@ -31,8 +31,6 @@ if __name__ == '__main__':
 
 			if isinstance(map_target, arena.Fighter):
 				return map_target
-		
-		#return None
 
 	async def check_win(ctx, match):
 		global matches
@@ -92,6 +90,7 @@ if __name__ == '__main__':
 			case 13: message = "the arguements must be proper numbers"
 			case 14: message = "please input a valid direction"
 			case 15: message = "no target in that direction"
+			case 16: message = "match has already started, fight to the death!"
 			case _: message = "unknown error occured, this should not be possible"
 		
 		await ctx.send("Error: " + message)
@@ -167,6 +166,13 @@ if __name__ == '__main__':
 		if channel_match is None:
 			await send_error(ctx, 2)
 			return
+		if not channel_match.started:
+			channel_match.remove_fighter(ctx.author)
+		else:
+			send_error(ctx, 16)
+			return
+
+		await ctx.send()
 
 	@bot.command()
 	async def end(ctx):
