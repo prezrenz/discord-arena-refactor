@@ -1,4 +1,5 @@
 import arena
+import helpers
 
 import discord
 from discord.ext import commands
@@ -12,6 +13,40 @@ if __name__ == '__main__':
 	intents.message_content = True
 
 	bot = commands.Bot(command_prefix='//', intents=intents)
+
+	def get_attack_offset(atk_dir: str):
+		atk_dir = atk_dir.lower()
+		match atk_dir:
+			case "up": return [0, -1]
+			case "down": return [0, 1]
+			case "left": return [-1, 0]
+			case "right": return [1, 0]
+			case _: return None
+
+	def get_attack_target(weapon_range, position, offset, match_map):
+		for i in range(1, weapon_range+1, 1):
+			rx = helpers.clamp(position[0]+(offset[0]*i), 1, 10)
+			ry = helpers.clamp(position[1]+(offset[1]*i), 1, 10)
+			map_target = match_map[rx-1][ry-1]
+
+			if isinstance(map_target, arena.Fighter):
+				return map_target
+		
+		#return None
+
+	async def check_win(ctx, match):
+		global matches
+
+		match.remove_dead()
+
+		if len(match.fighters) == 1:
+			matches.remove(match)
+			await ctx.send("{match.get_current_turn().user.mention} has won!")
+
+	def damage_target(ctx, damage, target, match):
+		target.hp -= damage
+		match.check_actions_left()
+		check_win(ctx, match)
 
 	def find_user_in_matches(user_mention):
 		global matches
@@ -55,6 +90,8 @@ if __name__ == '__main__':
 			case 11: message = "you tried to move more than 4 squares"
 			case 12: message = "you tried to move into another fighter"
 			case 13: message = "the arguements must be proper numbers"
+			case 14: message = "please input a valid direction"
+			case 15: message = "no target in that direction"
 			case _: message = "unknown error occured, this should not be possible"
 		
 		await ctx.send("Error: " + message)
@@ -193,7 +230,39 @@ if __name__ == '__main__':
 		channel_match.check_actions_left()
 		await ctx.send(embed=channel_match.update_map())
 
+	@bot.command()
+	async def attack(ctx, atk_dir):
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+		
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
+		if not channel_match.started:
+			await send_error(ctx, 9)
+			return
+		if channel_match.get_current_turn().user != ctx.author:
+			await send_error(ctx, 10)
+			return
+		
+		offset = get_attack_offset(atk_dir)
+		if offset is None:
+			await send_error(ctx, 14)
+			return
+		
+		attacker = channel_match.get_current_turn()
+		target = get_attack_target(attacker.equip['range'], attacker.get_position(), offset, channel_match.map)
+		if target is None:
+			await send_error(ctx, 15)
+			return
+		else:
+			await ctx.send(f"{attacker.user.mention} has dealt {attacker.equip['damage']} with a {attacker.equip['name']} to {target.user.mention}")
+			damage_target(ctx, attacker.equip['damage'], target, channel_match)
+			await ctx.send(embed=channel_match.update_map())
+
 	@move.error
+	@attack.error
 	async def discord_errors(ctx, error):
 		if isinstance(error, commands.MissingRequiredArgument):
 			await ctx.send("Error: missing arguements for command used")

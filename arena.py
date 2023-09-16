@@ -5,7 +5,7 @@ import random
 import discord.embeds
 
 weapons_data = [
-	{"name": "fist", "damage": 1, "range": 1},
+	{"name": "fist", "damage": 1, "range": 4},
 	{"name": "dagger", "damage": 2, "range": 1},
 	{"name": "rapier", "damage": 3, "range": 1},
 	{"name": "axe", "damage": 3, "range": 1},
@@ -33,7 +33,7 @@ class Fighter(Object):
 		self.actions = 2
 		self.hp = 12
 	
-		self.equip = {"name": "fist", "damage": 1, "range": 1}
+		self.equip = weapons_data[0] #{"name": "fist", "damage": 1, "range": 4}
 
 		self.shortcode = shortcode
 
@@ -196,10 +196,11 @@ class MatchState:
 				self.fighters.remove(i)
 
 	def update_map(self):
-		message = 	f"""Current Turn:{self.get_current_turn().user.mention}
-						Current Round:{self.current_round}
-						Current Actions Left:{self.get_current_turn().actions}
-						Equipped:{self.get_current_turn().equip['name']}"""
+		message = 	f"""Current Turn: {self.get_current_turn().user.mention}
+						Current Round: {self.current_round}
+						Current Actions Left: {self.get_current_turn().actions}
+						Current Health: {self.get_current_turn().hp}/12
+						Equipped: {self.get_current_turn().equip['name']}"""
 
 		embed = discord.Embed(title="Battlemap", description=message)
 		url = battlemap.get_url() + "10x10"
