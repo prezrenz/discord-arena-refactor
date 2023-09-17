@@ -80,7 +80,7 @@ if __name__ == '__main__':
 			case 3: message = "match already started"
 			case 4: message = "please finish your match first"
 			case 5: message = "need at least 1 more fighter to start"
-			case 6: message = "challenger needs to be one to start match"
+			case 6: message = "Fighter #1 needs to be one to start match"
 			case 7: message = "cannot join, match already full"
 			case 8: message = "you are not part of this match"
 			case 9: message = "match has not started on this channel"
@@ -169,10 +169,16 @@ if __name__ == '__main__':
 		if not channel_match.started:
 			channel_match.remove_fighter(ctx.author)
 		else:
-			send_error(ctx, 16)
+			await send_error(ctx, 16)
 			return
+		if not channel_match.fighters:
+			matches.remove(channel_match)
+			await ctx.send(f"Admin {ctx.author} has ended the Battle at the {ctx.channel}!")
+			return
+		else:
+			channel_match.invoker = channel_match.fighters[0].user
 
-		await ctx.send()
+		await ctx.send(f"{ctx.author} has retired from the match", embed=channel_match.display_roster())
 
 	@bot.command()
 	async def end(ctx):
@@ -216,7 +222,7 @@ if __name__ == '__main__':
 		if channel_match.get_current_turn().user != ctx.author:
 			await send_error(ctx, 10)
 			return
-		if (int(x)+int(y)) > 4:
+		if (abs(x)+abs(y)) > 4:
 			await send_error(ctx, 11)
 			return
 		
@@ -261,7 +267,6 @@ if __name__ == '__main__':
 		target = get_attack_target(attacker.equip['range'], attacker.get_position(), offset, channel_match.map)
 		if target is None:
 			await send_error(ctx, 15)
-			return
 		else:
 			await ctx.send(f"{attacker.user.mention} has dealt {attacker.equip['damage']} with a {attacker.equip['name']} to {target.user.mention}")
 			damage_target(ctx, attacker.equip['damage'], target, channel_match)

@@ -5,7 +5,7 @@ import random
 import discord.embeds
 
 weapons_data = [
-	{"name": "fist", "damage": 1, "range": 4},
+	{"name": "fist", "damage": 1, "range": 1},
 	{"name": "dagger", "damage": 2, "range": 1},
 	{"name": "rapier", "damage": 3, "range": 1},
 	{"name": "axe", "damage": 3, "range": 1},
@@ -31,9 +31,9 @@ class Fighter(Object):
 		
 		self.move = 4
 		self.actions = 2
-		self.hp = 12
+		self.hp = 4
 	
-		self.equip = weapons_data[0] #{"name": "fist", "damage": 1, "range": 4}
+		self.equip = weapons_data[0]
 
 		self.shortcode = shortcode
 
@@ -168,7 +168,10 @@ class MatchState:
 		self.fighters.append(new)
 	
 	def remove_fighter(self, user):
-		self.fighters.remove(self.find_user_in_match(user.mention))
+		obj = self.find_user_in_match(user.mention)
+		x, y = obj.get_position()
+		self.map[x-1][y-1] = 0
+		self.fighters.remove(obj)
 	
 	def get_current_turn(self):
 		return self.fighters[self.current_turn]
@@ -193,7 +196,7 @@ class MatchState:
 	def remove_dead(self):
 		for i in self.fighters:
 			if i.hp <= 0:
-				self.fighters.remove(i)
+				self.remove_fighter(i.user)
 
 	def update_map(self):
 		message = 	f"""Current Turn: {self.get_current_turn().user.mention}
