@@ -31,7 +31,7 @@ class Fighter(Object):
 		
 		self.move = 4
 		self.actions = 2
-		self.hp = 4
+		self.hp = 12
 	
 		self.equip = weapons_data[0]
 

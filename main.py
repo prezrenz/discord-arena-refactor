@@ -39,12 +39,12 @@ if __name__ == '__main__':
 
 		if len(match.fighters) == 1:
 			matches.remove(match)
-			await ctx.send("{match.get_current_turn().user.mention} has won!")
+			await ctx.send(f"{match.fighters[0].user.mention} has won!")
 
-	def damage_target(ctx, damage, target, match):
+	async def damage_target(ctx, damage, target, match):
 		target.hp -= damage
 		match.check_actions_left()
-		check_win(ctx, match)
+		await check_win(ctx, match)
 
 	def find_user_in_matches(user_mention):
 		global matches
@@ -269,7 +269,7 @@ if __name__ == '__main__':
 			await send_error(ctx, 15)
 		else:
 			await ctx.send(f"{attacker.user.mention} has dealt {attacker.equip['damage']} with a {attacker.equip['name']} to {target.user.mention}")
-			damage_target(ctx, attacker.equip['damage'], target, channel_match)
+			await damage_target(ctx, attacker.equip['damage'], target, channel_match)
 			await ctx.send(embed=channel_match.update_map())
 
 	@move.error
