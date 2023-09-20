@@ -32,6 +32,9 @@ if __name__ == '__main__':
 			if isinstance(map_target, arena.Fighter):
 				return map_target
 
+	def get_ranged_distance(origin, target):
+		return abs(target[0]-origin[0]) + abs(target[1]-origin[1])
+
 	async def check_win(ctx, match):
 		global matches
 
@@ -70,7 +73,7 @@ if __name__ == '__main__':
 		
 		return None
 
-	async def send_error(ctx, error_code):
+	async def send_error(ctx, error_code, *argv):
 		
 		match error_code:
 
@@ -91,6 +94,9 @@ if __name__ == '__main__':
 			case 14: message = "please input a valid direction"
 			case 15: message = "no target in that direction"
 			case 16: message = "match has already started, fight to the death!"
+			case 17: message = f"you must equip {argv[0]} to use {argv[1]} command"
+			case 18: message = f"no target called {argv[0]} found"
+			case 19: message = "target is out of range of 5 squares"
 			case _: message = "unknown error occured, this should not be possible"
 		
 		await ctx.send("Error: " + message)
@@ -272,8 +278,44 @@ if __name__ == '__main__':
 			await damage_target(ctx, attacker.equip['damage'], target, channel_match)
 			await ctx.send(embed=channel_match.update_map())
 
+	@bot.command()
+	async def throw(ctx, target_mention):
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+		
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
+		if not channel_match.started:
+			await send_error(ctx, 9)
+			return
+		if channel_match.get_current_turn().user != ctx.author:
+			await send_error(ctx, 10)
+			return
+		
+		attacker = channel_match.get_current_turn()
+		if attacker.equip['name'] != "dagger":
+			await send_error(ctx, 17, "dagger", "throw")
+			return
+		
+		target = channel_match.find_user_in_match(target_mention)
+		if target is None:
+			await send_error(ctx, 18, target_mention)
+			return
+		
+		distance = get_ranged_distance(attacker.get_position(), target.get_position())
+		if distance > 5:
+			await send_error(ctx, 19)
+			return
+		else:
+			await ctx.send(f"{attacker.user.mention} threw a dagger at {target_mention}, dealing {attacker.equip['damage']}")
+			await damage_target(ctx, attacker.equip['damage'], target, channel_match)
+			await ctx.send(embed=channel_match.update_map())
+
 	@move.error
 	@attack.error
+	@throw.error
 	async def discord_errors(ctx, error):
 		if isinstance(error, commands.MissingRequiredArgument):
 			await ctx.send("Error: missing arguements for command used")
