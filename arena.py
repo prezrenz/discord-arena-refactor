@@ -53,8 +53,6 @@ class Fighter(Object):
 		destination_object = map[cx-1][cy-1]
 		if destination_object == 0:
 			self.confirm_move(x, y, map)
-			
-			return "Empty"
 		else:
 			obj_type = type(destination_object).__name__
 			match obj_type:
@@ -69,7 +67,8 @@ class Fighter(Object):
 					self.hp -= destination_object.damage
 					self.confirm_move(x, y, map)
 				
-			return destination_object
+		
+		return destination_object
 	
 	def reset_actions(self):
 		self.move = 4

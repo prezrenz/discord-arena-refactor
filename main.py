@@ -35,6 +35,9 @@ if __name__ == '__main__':
 	def get_ranged_distance(origin, target):
 		return abs(target[0]-origin[0]) + abs(target[1]-origin[1])
 
+	def move_shove_target(match, offset, target):
+		target.map_move(offset[0]*2, offset[1]*2, match.map)
+
 	async def check_win(ctx, match):
 		global matches
 
@@ -232,11 +235,14 @@ if __name__ == '__main__':
 			await send_error(ctx, 11)
 			return
 		
-		move = channel_match.get_current_turn().map_move(int(x), int(y), channel_match.map)
-		move_location = channel_match.get_current_turn().x + str(channel_match.get_current_turn().y)
+		invoker = channel_match.get_current_turn()
+		move = invoker.map_move(int(x), int(y), channel_match.map)
+		move_location = invoker.x + str(invoker.y)
 		
 		if move == 0:
 			await ctx.send(f"{ctx.author.mention} has moved to {move_location}")
+		elif move == invoker:
+			await ctx.send(f"{ctx.author.mention} has not moved and skipped an action")
 		elif isinstance(move, arena.Fighter):
 			await send_error(ctx, 12)
 			return
@@ -307,15 +313,50 @@ if __name__ == '__main__':
 		distance = get_ranged_distance(attacker.get_position(), target.get_position())
 		if distance > 5:
 			await send_error(ctx, 19)
-			return
 		else:
 			await ctx.send(f"{attacker.user.mention} threw a dagger at {target_mention}, dealing {attacker.equip['damage']}")
 			await damage_target(ctx, attacker.equip['damage'], target, channel_match)
 			await ctx.send(embed=channel_match.update_map())
 
+	@bot.command()
+	async def shove(ctx, atk_dir):
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+		
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
+		if not channel_match.started:
+			await send_error(ctx, 9)
+			return
+		if channel_match.get_current_turn().user != ctx.author:
+			await send_error(ctx, 10)
+			return
+		
+		attacker = channel_match.get_current_turn()
+		if attacker.equip['name'] != "axe":
+			await send_error(ctx, 17, "axe", "shove")
+			return
+
+		offset = get_attack_offset(atk_dir)
+		if offset is None:
+			await send_error(ctx, 14)
+			return
+
+		target = get_attack_target(attacker.equip['range'], attacker.get_position(), offset, channel_match.map)
+		if target is None:
+			await send_error(ctx, 15)
+		else:
+			await ctx.send(f"{attacker.user.mention} has shoved {target.user.mention} by 2 square with a {attacker.equip['name']} and dealt 2 damage")
+			move_shove_target(channel_match, offset, target)
+			await damage_target(ctx, 2, target, channel_match)
+			await ctx.send(embed=channel_match.update_map())
+
 	@move.error
 	@attack.error
 	@throw.error
+	@shove.error
 	async def discord_errors(ctx, error):
 		if isinstance(error, commands.MissingRequiredArgument):
 			await ctx.send("Error: missing arguements for command used")
