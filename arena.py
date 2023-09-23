@@ -75,7 +75,10 @@ class Fighter(Object):
 		self.actions = 2
 	
 	def put_in_map(self):
-		return f"/{self.x}{self.y}~{self.shortcode}"
+		if self.shortcode is None:
+			return f"/{self.x}{self.y}-{self.user.name}"
+		else:
+			return f"/{self.x}{self.y}~{self.shortcode}"
 
 class Weapon(Object):
 	def __init__(self, x, y, data, map):
@@ -159,9 +162,10 @@ class MatchState:
 			x = random.randint(1, 10)
 			y = random.randint(1, 10)
 
-		# does not work without profile picture
-		# check output of user.avatar.url if no profile
-		shortcode = battlemap.get_shortcode(user.avatar.url)
+		if user.avatar is None:
+			shortcode = None
+		else:
+			shortcode = battlemap.get_shortcode(user.avatar.url)
 		new = Fighter(x, y, self.map, user, shortcode)
 
 		self.fighters.append(new)
