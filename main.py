@@ -1,3 +1,4 @@
+from typing import Any
 import arena
 import helpers
 
@@ -6,6 +7,40 @@ from discord.ext import commands
 from os import getenv
 import random
 
+class ArenaHelp(commands.MinimalHelpCommand):
+	async def send_bot_help(self, mapping):
+		embed = discord.Embed(title="Arena Help")
+		getting_started = 	"""
+							To start a fight in the channel, use the `//challenge` command
+							For those who want to join, use the `//join` command
+							Once there is at least two combatants,
+							Fighter No. 1 in the roster can use the `//start` command to start the fight
+
+							Admins can use the `//end` command to end an ongoing match, and those who
+							joined a match before starting can use the `//retire` command to back out
+							
+							The other commands are action commands, good luck
+							"""
+		
+		embed.add_field(name="Getting Started", value=getting_started, inline=True)
+
+		for cog, commands in mapping.items():
+			command_signatures = [self.get_command_signature(c) for c in commands]
+			if command_signatures:
+				embed.add_field(name="Commands", value='\n'.join(command_signatures), inline=False)
+		
+		channel = self.get_destination()
+		await channel.send(embed=embed)
+	
+	async def send_command_help(self, command):
+		embed = discord.Embed(title=self.get_command_signature(command), color=discord.Color.dark_blue())
+
+		if command.help:
+			embed.description = command.help
+		
+		channel = self.get_destination()
+		await channel.send(embed=embed)
+
 if __name__ == '__main__':
 	matches = []
     
@@ -13,6 +48,7 @@ if __name__ == '__main__':
 	intents.message_content = True
 
 	bot = commands.Bot(command_prefix='//', intents=intents)
+	bot.help_command = ArenaHelp()
 
 	def get_attack_offset(atk_dir: str):
 		atk_dir = atk_dir.lower()
@@ -106,6 +142,10 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def challenge(ctx):
+		"""
+		Challenge the current channel and start looking for other combatants.
+		Only 1 match per channel is allowed.
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -124,6 +164,10 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def start(ctx):
+		"""
+		Start the match in the current channel.
+		Fighter No. 1 in the roster must start the fight.
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -146,6 +190,9 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def join(ctx):
+		"""
+		Join a match in the current channel if there are any.
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -168,6 +215,9 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def retire(ctx):
+		"""
+		Back out from the match you joined in the current channel.
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -191,6 +241,11 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def end(ctx):
+		"""
+		***FOR ADMINS ONLY***
+
+		End or cancel the match on the current channel, if there are any.
+		"""
 		if not ctx.author.guild_permissions.administrator:
 			await send_error(ctx, 0)
 			return
@@ -212,6 +267,24 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def move(ctx, x, y):
+		"""
+		Used to move around the map via the x and y axis.
+		You can only move 4 squares, x and y must not total greater than 4.
+		Negative x is left, positive x is right.
+		Negative y is up, positive y is down.
+
+		***PARAMATERS***:
+		`x` - positive or negative number of squares to move in the x axis
+		`y` - positive or negative number of squares to move in the y axis
+
+		***EXAMPLE***:
+		`//move 0 0` to skip an action
+
+		`//move 1 0` to move 1 square to the right
+		`//move -1 0` to move 1 square to the left
+
+		`//move 1 2` to move 1 square left and 2 squares down
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -256,6 +329,13 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def attack(ctx, atk_dir):
+		"""
+		Attack in a certain direction, and damage an enemy
+		if there are any in the direction. Attack range depend on weapon.
+
+		***ARGUEMENTS***:
+		`atk_dir` - must be the directions `up`, `down`, `left`, or `right`
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -286,6 +366,14 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def throw(ctx, target_mention):
+		"""
+		***SPECIAL COMMAND: REQUIRES DAGGER***
+		Throw a dagger at the mentioned user, if user is in match.
+		Will succeed if the target is within 5 squares from your square.
+
+		***ARGUEMENTS***:
+		`target_mention` - must be an `@mention` of a target in match
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -320,6 +408,14 @@ if __name__ == '__main__':
 
 	@bot.command()
 	async def shove(ctx, atk_dir):
+		"""
+		***SPECIAL COMMAND: REQUIRES AXE***
+		Shove the target in the specified direction and push
+		them 2 squares in that direction and deal 1 damage.
+
+		***ARGUEMENTS***:
+		`atk_dir` - must be the directions `up`, `down`, `left`, or `right`
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -348,13 +444,21 @@ if __name__ == '__main__':
 		if target is None:
 			await send_error(ctx, 15)
 		else:
-			await ctx.send(f"{attacker.user.mention} has shoved {target.user.mention} by 2 square with a {attacker.equip['name']} and dealt 2 damage")
+			await ctx.send(f"{attacker.user.mention} has shoved {target.user.mention} by 2 square with a {attacker.equip['name']} and dealt 1 damage")
 			move_shove_target(channel_match, offset, target)
-			await damage_target(ctx, 2, target, channel_match)
+			await damage_target(ctx, 1, target, channel_match)
 			await ctx.send(embed=channel_match.update_map())
 
 	@bot.command()
 	async def disarm(ctx, atk_dir):
+		"""
+		***SPECIAL COMMAND: REQUIRES RAPIER***
+		Removes the weapon of target in the specified direction
+		and force them to use their fists.
+
+		***ARGUEMENTS***:
+		`atk_dir` - must be the directions `up`, `down`, `left`, or `right`
+		"""
 		global matches
 
 		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
@@ -391,6 +495,7 @@ if __name__ == '__main__':
 	@attack.error
 	@throw.error
 	@shove.error
+	@disarm.error
 	async def discord_errors(ctx, error):
 		if isinstance(error, commands.MissingRequiredArgument):
 			await ctx.send("Error: missing arguements for command used")
