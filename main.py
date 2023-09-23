@@ -353,6 +353,40 @@ if __name__ == '__main__':
 			await damage_target(ctx, 2, target, channel_match)
 			await ctx.send(embed=channel_match.update_map())
 
+	@bot.command()
+	async def disarm(ctx, atk_dir):
+		global matches
+
+		channel_match = get_match_in_channel(ctx.channel, ctx.guild)
+		
+		if channel_match is None:
+			await send_error(ctx, 2)
+			return
+		if not channel_match.started:
+			await send_error(ctx, 9)
+			return
+		if channel_match.get_current_turn().user != ctx.author:
+			await send_error(ctx, 10)
+			return
+		
+		attacker = channel_match.get_current_turn()
+		if attacker.equip['name'] != "rapier":
+			await send_error(ctx, 17, "rapier", "disarm")
+			return
+
+		offset = get_attack_offset(atk_dir)
+		if offset is None:
+			await send_error(ctx, 14)
+			return
+
+		target = get_attack_target(attacker.equip['range'], attacker.get_position(), offset, channel_match.map)
+		if target is None:
+			await send_error(ctx, 15)
+		else:
+			await ctx.send(f"{attacker.user.mention} has disarmed {target.user.mention}")
+			target.equip = arena.weapons_data[0]
+			await ctx.send(embed=channel_match.update_map())
+
 	@move.error
 	@attack.error
 	@throw.error
